@@ -8,32 +8,80 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .card { @apply bg-white rounded-2xl shadow-lg p-6; }
-        .health-excellent { @apply bg-green-500; }
-        .health-good { @apply bg-green-400; }
-        .health-fair { @apply bg-yellow-400; }
-        .health-poor { @apply bg-orange-500; }
-        .health-critical { @apply bg-red-500; }
+        :root {
+            --swiss-green: #00843D;
+            --swiss-green-light: #4CAF50;
+            --swiss-green-dark: #006B31;
+            --swiss-red: #DA291C;
+            --alpine-white: #FAFAFA;
+            --mountain-gray: #F5F5F5;
+        }
+        body { font-family: 'Inter', sans-serif; background: var(--mountain-gray); }
+        .swiss-gradient { background: linear-gradient(135deg, var(--swiss-green) 0%, var(--swiss-green-dark) 100%); }
+        .card { 
+            background: white; 
+            border-radius: 16px; 
+            box-shadow: 0 4px 20px rgba(0, 132, 61, 0.08);
+            padding: 24px;
+            border: 1px solid rgba(0, 132, 61, 0.1);
+        }
+        .card:hover { box-shadow: 0 8px 30px rgba(0, 132, 61, 0.12); }
+        .btn-primary {
+            background: var(--swiss-green);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary:hover { background: var(--swiss-green-dark); transform: translateY(-1px); }
+        .health-excellent { background: #00843D; }
+        .health-good { background: #4CAF50; }
+        .health-fair { background: #FFC107; }
+        .health-poor { background: #FF9800; }
+        .health-critical { background: #DA291C; }
+        .input-field {
+            width: 100%;
+            border: 2px solid #E0E0E0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus { border-color: var(--swiss-green); outline: none; }
+        .swiss-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(0, 132, 61, 0.1);
+            color: var(--swiss-green);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div id="app">
-        <!-- Header -->
-        <header class="gradient-bg text-white py-6 px-4 shadow-lg">
+        <!-- Header - Swiss Style -->
+        <header class="swiss-gradient text-white py-5 px-4 shadow-lg">
             <div class="max-w-6xl mx-auto flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <span class="text-4xl">🔋</span>
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
+                        <span class="text-2xl">🔋</span>
+                    </div>
                     <div>
-                        <h1 class="text-2xl font-bold">Malim</h1>
-                        <p class="text-sm opacity-80">EV Battery Health Analysis</p>
+                        <h1 class="text-2xl font-bold tracking-tight">Malim</h1>
+                        <p class="text-sm opacity-90 flex items-center gap-2">
+                            EV Battery Health 
+                            <span class="inline-flex items-center bg-white/20 px-2 py-0.5 rounded text-xs">🇨🇭 Swiss Made</span>
+                        </p>
                     </div>
                 </div>
-                <nav class="flex gap-4">
-                    <button @click="view = 'dashboard'" :class="{'opacity-100': view === 'dashboard', 'opacity-60': view !== 'dashboard'}" class="hover:opacity-100 transition">Dashboard</button>
-                    <button @click="view = 'analyze'" :class="{'opacity-100': view === 'analyze', 'opacity-60': view !== 'analyze'}" class="hover:opacity-100 transition">Analyse</button>
-                    <button @click="view = 'passport'" :class="{'opacity-100': view === 'passport', 'opacity-60': view !== 'passport'}" class="hover:opacity-100 transition">Passport</button>
+                <nav class="flex gap-1 bg-white/10 rounded-lg p-1">
+                    <button @click="view = 'dashboard'" :class="view === 'dashboard' ? 'bg-white text-green-700' : 'text-white hover:bg-white/10'" class="px-4 py-2 rounded-md transition font-medium text-sm">Dashboard</button>
+                    <button @click="view = 'analyze'" :class="view === 'analyze' ? 'bg-white text-green-700' : 'text-white hover:bg-white/10'" class="px-4 py-2 rounded-md transition font-medium text-sm">Analyse</button>
+                    <button @click="view = 'passport'" :class="view === 'passport' ? 'bg-white text-green-700' : 'text-white hover:bg-white/10'" class="px-4 py-2 rounded-md transition font-medium text-sm">Passport</button>
                 </nav>
             </div>
         </header>
@@ -49,23 +97,23 @@
                     <form @submit.prevent="addVehicle" class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">Marke</label>
-                            <input v-model="newVehicle.make" type="text" placeholder="Tesla" class="w-full border rounded-lg px-3 py-2" required>
+                            <input v-model="newVehicle.make" type="text" placeholder="Tesla" class="input-field" required>
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">Modell</label>
-                            <input v-model="newVehicle.model" type="text" placeholder="Model 3" class="w-full border rounded-lg px-3 py-2" required>
+                            <input v-model="newVehicle.model" type="text" placeholder="Model 3" class="input-field" required>
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">Baujahr</label>
-                            <input v-model.number="newVehicle.year" type="number" min="2010" max="2030" class="w-full border rounded-lg px-3 py-2" required>
+                            <input v-model.number="newVehicle.year" type="number" min="2010" max="2030" class="input-field" required>
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">Batteriekapazität (kWh)</label>
-                            <input v-model.number="newVehicle.battery_capacity_kwh" type="number" step="0.1" class="w-full border rounded-lg px-3 py-2" required>
+                            <input v-model.number="newVehicle.battery_capacity_kwh" type="number" step="0.1" class="input-field" required>
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">Batterietyp</label>
-                            <select v-model="newVehicle.battery_type" class="w-full border rounded-lg px-3 py-2">
+                            <select v-model="newVehicle.battery_type" class="input-field">
                                 <option value="NMC">NMC</option>
                                 <option value="LFP">LFP</option>
                                 <option value="NCA">NCA</option>
@@ -73,10 +121,10 @@
                         </div>
                         <div>
                             <label class="block text-sm text-gray-600 mb-1">Kilometerstand</label>
-                            <input v-model.number="newVehicle.mileage_km" type="number" class="w-full border rounded-lg px-3 py-2">
+                            <input v-model.number="newVehicle.mileage_km" type="number" class="input-field">
                         </div>
                         <div class="md:col-span-3">
-                            <button type="submit" class="gradient-bg text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition">
+                            <button type="submit" class="btn-primary">
                                 + Fahrzeug hinzufügen
                             </button>
                         </div>
@@ -115,7 +163,7 @@
             <div v-if="view === 'analyze'" class="space-y-6">
                 <div class="flex items-center justify-between">
                     <h2 class="text-2xl font-bold text-gray-800">Batterie-Analyse</h2>
-                    <select v-model="selectedVehicleId" class="border rounded-lg px-4 py-2">
+                    <select v-model="selectedVehicleId" class="input-field" style="width: auto; min-width: 200px;">
                         <option value="">Fahrzeug wählen...</option>
                         <option v-for="v in vehicles" :key="v.id" :value="v.id">{{ v.make }} {{ v.model }}</option>
                     </select>
@@ -129,34 +177,34 @@
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm text-gray-600 mb-1">Start SoC (%)</label>
-                                    <input v-model.number="newSession.start_soc" type="number" min="0" max="100" class="w-full border rounded-lg px-3 py-2" required>
+                                    <input v-model.number="newSession.start_soc" type="number" min="0" max="100" class="input-field" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm text-gray-600 mb-1">End SoC (%)</label>
-                                    <input v-model.number="newSession.end_soc" type="number" min="0" max="100" class="w-full border rounded-lg px-3 py-2" required>
+                                    <input v-model.number="newSession.end_soc" type="number" min="0" max="100" class="input-field" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm text-gray-600 mb-1">Energie (kWh)</label>
-                                    <input v-model.number="newSession.energy_kwh" type="number" step="0.1" class="w-full border rounded-lg px-3 py-2" required>
+                                    <input v-model.number="newSession.energy_kwh" type="number" step="0.1" class="input-field" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm text-gray-600 mb-1">Dauer (Min)</label>
-                                    <input v-model.number="newSession.duration_minutes" type="number" class="w-full border rounded-lg px-3 py-2" required>
+                                    <input v-model.number="newSession.duration_minutes" type="number" class="input-field" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm text-gray-600 mb-1">Ladeleistung (kW)</label>
-                                    <input v-model.number="newSession.charger_power_kw" type="number" class="w-full border rounded-lg px-3 py-2" required>
+                                    <input v-model.number="newSession.charger_power_kw" type="number" class="input-field" required>
                                 </div>
                                 <div>
                                     <label class="block text-sm text-gray-600 mb-1">Temperatur (°C)</label>
-                                    <input v-model.number="newSession.temperature_c" type="number" class="w-full border rounded-lg px-3 py-2">
+                                    <input v-model.number="newSession.temperature_c" type="number" class="input-field">
                                 </div>
                             </div>
                             <div class="flex items-center gap-2">
                                 <input v-model="newSession.is_fast_charge" type="checkbox" id="fastcharge" class="rounded">
                                 <label for="fastcharge" class="text-sm text-gray-600">Schnellladen (DC)</label>
                             </div>
-                            <button type="submit" class="w-full gradient-bg text-white py-2 rounded-lg font-medium">
+                            <button type="submit" class="w-full btn-primary">
                                 + Ladevorgang speichern
                             </button>
                         </form>
@@ -166,7 +214,7 @@
                     <div class="card">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="font-semibold text-lg">Analyse-Ergebnis</h3>
-                            <button @click="analyzeVehicle" class="gradient-bg text-white px-4 py-2 rounded-lg text-sm font-medium" :disabled="analyzing">
+                            <button @click="analyzeVehicle" class="btn-primary text-sm" :disabled="analyzing">
                                 {{ analyzing ? 'Analysiere...' : '🔍 Analysieren' }}
                             </button>
                         </div>
@@ -250,12 +298,18 @@
                 <h2 class="text-2xl font-bold text-gray-800">Battery Passport</h2>
 
                 <div v-if="currentPassport" class="max-w-2xl mx-auto">
-                    <div class="card border-2 border-purple-200">
+                    <div class="card border-2 border-green-200">
                         <!-- Passport Header -->
-                        <div class="text-center border-b pb-4 mb-4">
-                            <div class="text-5xl mb-2">🔋</div>
-                            <h3 class="text-xl font-bold text-purple-700">Battery Value Passport</h3>
-                            <p class="text-sm text-gray-500">Zertifiziert von Malim</p>
+                        <div class="text-center border-b border-green-100 pb-4 mb-4">
+                            <div class="flex justify-center mb-3">
+                                <div class="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center">
+                                    <span class="text-3xl">🔋</span>
+                                </div>
+                            </div>
+                            <h3 class="text-xl font-bold text-green-700">Battery Value Passport</h3>
+                            <p class="text-sm text-gray-500 flex items-center justify-center gap-2 mt-1">
+                                <span>🇨🇭</span> Zertifiziert von Malim
+                            </p>
                         </div>
 
                         <!-- Vehicle Info -->
@@ -279,7 +333,7 @@
                         </div>
 
                         <!-- Health Status -->
-                        <div class="bg-gray-50 rounded-xl p-6 text-center mb-6">
+                        <div class="bg-green-50 rounded-xl p-6 text-center mb-6">
                             <div class="text-5xl font-bold mb-2" :style="{color: getHealthColor(currentPassport.health_grade)}">
                                 {{ currentPassport.soh_percent }}%
                             </div>
@@ -298,7 +352,7 @@
                     </div>
 
                     <div class="text-center mt-4">
-                        <button @click="currentPassport = null" class="text-purple-600 hover:underline">
+                        <button @click="currentPassport = null" class="text-green-600 hover:underline">
                             ← Zurück
                         </button>
                     </div>
@@ -317,7 +371,7 @@
                                     <p class="font-medium">{{ v.make }} {{ v.model }}</p>
                                     <p class="text-sm text-gray-500">{{ v.year }}</p>
                                 </div>
-                                <button class="gradient-bg text-white px-4 py-2 rounded-lg text-sm">
+                                <button class="btn-primary text-sm">
                                     Passport erstellen
                                 </button>
                             </div>
@@ -334,7 +388,7 @@
         <!-- Toast Notifications -->
         <div class="fixed bottom-4 right-4 space-y-2">
             <div v-for="toast in toasts" :key="toast.id" 
-                :class="'px-4 py-3 rounded-lg shadow-lg text-white ' + (toast.type === 'error' ? 'bg-red-500' : 'bg-green-500')">
+                :class="'px-4 py-3 rounded-lg shadow-lg text-white ' + (toast.type === 'error' ? 'bg-red-600' : 'bg-green-600')">
                 {{ toast.message }}
             </div>
         </div>
@@ -471,11 +525,11 @@
                 },
                 getHealthColor(grade) {
                     const colors = {
-                        excellent: '#22c55e',
-                        good: '#4ade80',
-                        fair: '#facc15',
-                        poor: '#f97316',
-                        critical: '#ef4444'
+                        excellent: '#00843D',
+                        good: '#4CAF50',
+                        fair: '#FFC107',
+                        poor: '#FF9800',
+                        critical: '#DA291C'
                     };
                     return colors[grade] || '#9ca3af';
                 },
