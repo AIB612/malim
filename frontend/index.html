@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Malim - EV Battery Health</title>
+    <title>Malim - EV Battery Health | Swiss Made 🇨🇭</title>
+    <meta name="description" content="Intelligente Batteriegesundheits-Analyse für Elektrofahrzeuge. Swiss Made Quality.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔋</text></svg>">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --swiss-green: #00843D;
@@ -16,16 +18,25 @@
             --alpine-white: #FAFAFA;
             --mountain-gray: #F5F5F5;
         }
+        * { box-sizing: border-box; }
         body { font-family: 'Inter', sans-serif; background: var(--mountain-gray); }
         .swiss-gradient { background: linear-gradient(135deg, var(--swiss-green) 0%, var(--swiss-green-dark) 100%); }
+        .hero-pattern {
+            background-color: var(--swiss-green);
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
         .card { 
             background: white; 
             border-radius: 16px; 
             box-shadow: 0 4px 20px rgba(0, 132, 61, 0.08);
             padding: 24px;
             border: 1px solid rgba(0, 132, 61, 0.1);
+            transition: all 0.3s ease;
         }
-        .card:hover { box-shadow: 0 8px 30px rgba(0, 132, 61, 0.12); }
+        .card:hover { 
+            box-shadow: 0 12px 40px rgba(0, 132, 61, 0.15); 
+            transform: translateY(-2px);
+        }
         .btn-primary {
             background: var(--swiss-green);
             color: white;
@@ -33,8 +44,33 @@
             border-radius: 8px;
             font-weight: 500;
             transition: all 0.2s;
+            border: none;
+            cursor: pointer;
         }
-        .btn-primary:hover { background: var(--swiss-green-dark); transform: translateY(-1px); }
+        .btn-primary:hover { 
+            background: var(--swiss-green-dark); 
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 132, 61, 0.3);
+        }
+        .btn-primary:disabled {
+            background: #9CA3AF;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background: white;
+            color: var(--swiss-green);
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            border: 2px solid var(--swiss-green);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .btn-secondary:hover {
+            background: var(--swiss-green);
+            color: white;
+        }
         .health-excellent { background: #00843D; }
         .health-good { background: #4CAF50; }
         .health-fair { background: #FFC107; }
@@ -45,9 +81,14 @@
             border: 2px solid #E0E0E0;
             border-radius: 8px;
             padding: 10px 14px;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
+            font-size: 14px;
         }
-        .input-field:focus { border-color: var(--swiss-green); outline: none; }
+        .input-field:focus { 
+            border-color: var(--swiss-green); 
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 132, 61, 0.1);
+        }
         .swiss-badge {
             display: inline-flex;
             align-items: center;
@@ -59,23 +100,46 @@
             font-size: 12px;
             font-weight: 500;
         }
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+        }
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--swiss-green);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <div id="app">
         <!-- Header - Swiss Style -->
-        <header class="swiss-gradient text-white py-5 px-4 shadow-lg">
+        <header class="hero-pattern text-white py-4 px-4 shadow-lg sticky top-0 z-50">
             <div class="max-w-6xl mx-auto flex items-center justify-between">
                 <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
+                    <div class="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-md">
                         <span class="text-2xl">🔋</span>
                     </div>
                     <div>
-                        <h1 class="text-2xl font-bold tracking-tight">Malim</h1>
-                        <p class="text-sm opacity-90 flex items-center gap-2">
-                            EV Battery Health 
-                            <span class="inline-flex items-center bg-white/20 px-2 py-0.5 rounded text-xs">🇨🇭 Swiss Made</span>
-                        </p>
+                        <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
+                            Malim
+                            <span class="text-xs bg-white/20 px-2 py-0.5 rounded-full font-normal">Beta</span>
+                        </h1>
+                        <p class="text-xs opacity-90">EV Battery Health 🇨🇭</p>
                     </div>
                 </div>
                 <nav class="flex gap-1 bg-white/10 rounded-lg p-1">
@@ -384,6 +448,66 @@
                 </div>
             </div>
         </main>
+
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 mt-12">
+            <div class="max-w-6xl mx-auto px-4 py-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <!-- Brand -->
+                    <div class="md:col-span-2">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+                                <span class="text-xl">🔋</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800">Malim</h3>
+                                <p class="text-xs text-gray-500">EV Battery Health</p>
+                            </div>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-4">
+                            Intelligente Batteriegesundheits-Analyse für Elektrofahrzeuge. 
+                            Entwickelt in der Schweiz mit Präzision und Qualität.
+                        </p>
+                        <div class="swiss-badge">
+                            🇨🇭 Swiss Made Quality
+                        </div>
+                    </div>
+                    
+                    <!-- Links -->
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-3">Produkt</h4>
+                        <ul class="space-y-2 text-sm text-gray-600">
+                            <li><a href="#" class="hover:text-green-600 transition">Dashboard</a></li>
+                            <li><a href="#" class="hover:text-green-600 transition">Analyse</a></li>
+                            <li><a href="#" class="hover:text-green-600 transition">Battery Passport</a></li>
+                            <li><a href="#" class="hover:text-green-600 transition">API Docs</a></li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Contact -->
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-3">Kontakt</h4>
+                        <ul class="space-y-2 text-sm text-gray-600">
+                            <li>📍 Basel, Switzerland</li>
+                            <li><a href="https://github.com/AIB612/malim" class="hover:text-green-600 transition">🐙 GitHub</a></li>
+                            <li><a href="https://linkedin.com/in/chenxuebranny" class="hover:text-green-600 transition">💼 LinkedIn</a></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Bottom -->
+                <div class="border-t border-gray-100 mt-8 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <p class="text-sm text-gray-500">
+                        © 2025 Malim. Made with 💚 in Switzerland.
+                    </p>
+                    <div class="flex gap-6 text-sm text-gray-500">
+                        <a href="#" class="hover:text-green-600 transition">Datenschutz</a>
+                        <a href="#" class="hover:text-green-600 transition">Impressum</a>
+                        <a href="#" class="hover:text-green-600 transition">AGB</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
 
         <!-- Toast Notifications -->
         <div class="fixed bottom-4 right-4 space-y-2">
