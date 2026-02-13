@@ -93,6 +93,22 @@ def create_app() -> FastAPI:
         @app.get("/")
         async def root():
             return FileResponse(str(static_path / "index.html"))
+    else:
+        @app.get("/")
+        async def root():
+            return {
+                "name": "Malim API",
+                "version": "0.1.0",
+                "description": "🔋 EV Battery Health Platform",
+                "made_in": "🇨🇭 Switzerland",
+                "docs": "/docs",
+                "health": "/live",
+                "endpoints": {
+                    "vehicles": "/api/v1/vehicles",
+                    "reports": "/api/v1/reports",
+                    "chat": "/api/v1/chat"
+                }
+            }
     
     return app
 
