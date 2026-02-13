@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application
 COPY src/ ./src/
+COPY static/ ./static/
 
 # Create non-root user
 RUN useradd -m -u 1000 malim && chown -R malim:malim /app
