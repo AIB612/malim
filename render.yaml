@@ -1,0 +1,26 @@
+# Render.com deployment config
+services:
+  - type: web
+    name: malim-api
+    runtime: docker
+    region: frankfurt  # Closest to Switzerland
+    plan: starter
+    healthCheckPath: /live
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: VECTOR_STORE
+        value: pgvector
+      - key: DATABASE_URL
+        fromDatabase:
+          name: malim-db
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false  # Set manually in dashboard
+
+databases:
+  - name: malim-db
+    plan: starter
+    region: frankfurt
+    postgresMajorVersion: 15
+    ipAllowList: []  # Only internal access

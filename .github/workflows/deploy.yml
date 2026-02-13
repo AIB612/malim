@@ -1,0 +1,77 @@
+name: Deploy Malim
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+env:
+  REGISTRY: acrmalim${{ github.event.inputs.environment || 'dev' }}.azurecr.io
+  IMAGE_NAME: malim
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+      
+      - name: Run tests
+        run: pytest tests/ -v
+
+  build-and-deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+      
+      - name: Login to ACR
+        run: |
+          az acr login --name acrmalim${{ github.event.inputs.environment || 'dev' }}
+      
+      - name: Build and push
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+      
+      - name: Deploy to Container Apps
+        run: |
+          az containerapp update \
+            --name ca-malim-api-${{ github.event.inputs.environment || 'dev' }} \
+            --resource-group rg-malim-${{ github.event.inputs.environment || 'dev' }} \
+            --image ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+      
+      - name: Get API URL
+        run: |
+          URL=$(az containerapp show \
+            --name ca-malim-api-${{ github.event.inputs.environment || 'dev' }} \
+            --resource-group rg-malim-${{ github.event.inputs.environment || 'dev' }} \
+            --query "properties.configuration.ingress.fqdn" -o tsv)
+          echo "🌐 Deployed to: https://$URL"

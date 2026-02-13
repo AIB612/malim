@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malim - EV Battery Health</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card { @apply bg-white rounded-xl shadow-lg p-6; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app">
+        <!-- Header -->
+        <header class="gradient-bg text-white py-6">
+            <div class="container mx-auto px-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-3xl">🔋</span>
+                        <h1 class="text-2xl font-bold">Malim</h1>
+                    </div>
+                    <nav class="space-x-6">
+                        <a href="#" @click.prevent="view='dashboard'" class="hover:underline">Dashboard</a>
+                        <a href="#" @click.prevent="view='chat'" class="hover:underline">Chat</a>
+                        <a href="/docs" class="hover:underline">API Docs</a>
+                    </nav>
+                </div>
+                <p class="mt-2 text-purple-100">EV Battery Health & Value Passport Platform</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <!-- Dashboard View -->
+            <div v-if="view === 'dashboard'">
+                <!-- Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="card">
+                        <div class="text-gray-500 text-sm">Registered Vehicles</div>
+                        <div class="text-3xl font-bold text-purple-600">{{ vehicles.length }}</div>
+                    </div>
+                    <div class="card">
+                        <div class="text-gray-500 text-sm">Health Reports</div>
+                        <div class="text-3xl font-bold text-green-600">{{ reports.length }}</div>
+                    </div>
+                    <div class="card">
+                        <div class="text-gray-500 text-sm">Avg. SoH</div>
+                        <div class="text-3xl font-bold text-blue-600">{{ avgSoH }}%</div>
+                    </div>
+                    <div class="card">
+                        <div class="text-gray-500 text-sm">Passports Issued</div>
+                        <div class="text-3xl font-bold text-orange-600">{{ passports }}</div>
+                    </div>
+                </div>
+
+                <!-- Add Vehicle Form -->
+                <div class="card mb-8">
+                    <h2 class="text-xl font-semibold mb-4">➕ Register New Vehicle</h2>
+                    <form @submit.prevent="addVehicle" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Make</label>
+                            <input v-model="newVehicle.make" type="text" required
+                                class="w-full border rounded-lg px-3 py-2" placeholder="Tesla">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Model</label>
+                            <input v-model="newVehicle.model" type="text" required
+                                class="w-full border rounded-lg px-3 py-2" placeholder="Model 3">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Year</label>
+                            <input v-model.number="newVehicle.year" type="number" required
+                                class="w-full border rounded-lg px-3 py-2" placeholder="2022">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Battery Capacity (kWh)</label>
+                            <input v-model.number="newVehicle.battery_capacity_kwh" type="number" step="0.1" required
+                                class="w-full border rounded-lg px-3 py-2" placeholder="60">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Battery Type</label>
+                            <select v-model="newVehicle.battery_type" class="w-full border rounded-lg px-3 py-2">
+                                <option value="NMC">NMC</option>
+                                <option value="LFP">LFP</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">VIN (optional)</label>
+                            <input v-model="newVehicle.vin" type="text"
+                                class="w-full border rounded-lg px-3 py-2" placeholder="WDC...">
+                        </div>
+                        <div class="md:col-span-3">
+                            <button type="submit" 
+                                class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700">
+                                Register Vehicle
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Vehicles List -->
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4">🚗 Your Vehicles</h2>
+                    <div v-if="vehicles.length === 0" class="text-gray-500 text-center py-8">
+                        No vehicles registered yet. Add one above!
+                    </div>
+                    <div v-else class="space-y-4">
+                        <div v-for="v in vehicles" :key="v.id" 
+                            class="border rounded-lg p-4 flex items-center justify-between hover:bg-gray-50">
+                            <div>
+                                <div class="font-semibold">{{ v.make }} {{ v.model }} ({{ v.year }})</div>
+                                <div class="text-sm text-gray-500">
+                                    {{ v.battery_capacity_kwh }} kWh {{ v.battery_type }} 
+                                    <span v-if="v.vin">• VIN: {{ v.vin }}</span>
+                                </div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button @click="analyzeVehicle(v.id)" 
+                                    class="bg-green-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-600">
+                                    Analyze
+                                </button>
+                                <button @click="generatePassport(v.id)" 
+                                    class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-600">
+                                    Passport
+                                </button>
+                                <button @click="deleteVehicle(v.id)" 
+                                    class="bg-red-500 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-600">
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Result Modal -->
+                <div v-if="analysisResult" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                    <div class="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+                        <div class="flex justify-between items-start mb-4">
+                            <h3 class="text-xl font-bold">🔋 Battery Health Report</h3>
+                            <button @click="analysisResult=null" class="text-gray-500 hover:text-gray-700">✕</button>
+                        </div>
+                        
+                        <!-- SoH Gauge -->
+                        <div class="text-center mb-6">
+                            <div class="text-6xl font-bold" :class="getSoHColor(analysisResult.soh_percent)">
+                                {{ analysisResult.soh_percent.toFixed(1) }}%
+                            </div>
+                            <div class="text-lg text-gray-600">State of Health</div>
+                            <div class="mt-2 inline-block px-4 py-1 rounded-full text-white"
+                                :class="getGradeColor(analysisResult.health_grade)">
+                                {{ analysisResult.health_grade.toUpperCase() }}
+                            </div>
+                        </div>
+
+                        <!-- Details -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <div class="text-sm text-gray-500">Estimated Capacity</div>
+                                <div class="font-semibold">{{ analysisResult.estimated_capacity_kwh.toFixed(1) }} kWh</div>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <div class="text-sm text-gray-500">Confidence</div>
+                                <div class="font-semibold">{{ (analysisResult.soh_confidence * 100).toFixed(0) }}%</div>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <div class="text-sm text-gray-500">Fast Charge Ratio</div>
+                                <div class="font-semibold">{{ analysisResult.fast_charge_ratio.toFixed(1) }}%</div>
+                            </div>
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <div class="text-sm text-gray-500">Value Impact</div>
+                                <div class="font-semibold" :class="analysisResult.value_impact_chf < 0 ? 'text-red-600' : 'text-green-600'">
+                                    {{ analysisResult.value_impact_chf?.toFixed(0) || 'N/A' }} CHF
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recommendations -->
+                        <div v-if="analysisResult.recommendations?.length" class="mb-4">
+                            <h4 class="font-semibold mb-2">💡 Recommendations</h4>
+                            <ul class="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                <li v-for="r in analysisResult.recommendations">{{ r }}</li>
+                            </ul>
+                        </div>
+
+                        <!-- Risk Factors -->
+                        <div v-if="analysisResult.risk_factors?.length">
+                            <h4 class="font-semibold mb-2">⚠️ Risk Factors</h4>
+                            <ul class="list-disc list-inside text-sm text-orange-700 space-y-1">
+                                <li v-for="r in analysisResult.risk_factors">{{ r }}</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat View -->
+            <div v-if="view === 'chat'" class="max-w-3xl mx-auto">
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4">💬 Battery Q&A</h2>
+                    
+                    <!-- Chat Messages -->
+                    <div class="h-96 overflow-y-auto border rounded-lg p-4 mb-4 bg-gray-50">
+                        <div v-for="msg in chatMessages" :key="msg.id" class="mb-4">
+                            <div v-if="msg.role === 'user'" class="flex justify-end">
+                                <div class="bg-purple-600 text-white rounded-lg px-4 py-2 max-w-[80%]">
+                                    {{ msg.content }}
+                                </div>
+                            </div>
+                            <div v-else class="flex justify-start">
+                                <div class="bg-white border rounded-lg px-4 py-2 max-w-[80%]">
+                                    {{ msg.content }}
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="chatLoading" class="flex justify-start">
+                            <div class="bg-gray-200 rounded-lg px-4 py-2">
+                                <span class="animate-pulse">Thinking...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input -->
+                    <form @submit.prevent="sendChat" class="flex space-x-2">
+                        <input v-model="chatInput" type="text" 
+                            class="flex-1 border rounded-lg px-4 py-2"
+                            placeholder="Ask about EV batteries...">
+                        <button type="submit" :disabled="chatLoading"
+                            class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50">
+                            Send
+                        </button>
+                    </form>
+
+                    <!-- Example Questions -->
+                    <div class="mt-4">
+                        <div class="text-sm text-gray-500 mb-2">Try asking:</div>
+                        <div class="flex flex-wrap gap-2">
+                            <button v-for="q in exampleQuestions" @click="chatInput = q; sendChat()"
+                                class="text-sm bg-gray-100 px-3 py-1 rounded-full hover:bg-gray-200">
+                                {{ q }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-gray-400 py-6 mt-12">
+            <div class="container mx-auto px-4 text-center">
+                <p>🔋 Malim - Built for the Swiss EV Market</p>
+                <p class="text-sm mt-2">Data stays in Switzerland 🇨🇭</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    view: 'dashboard',
+                    vehicles: [],
+                    reports: [],
+                    passports: 0,
+                    newVehicle: {
+                        make: '',
+                        model: '',
+                        year: 2023,
+                        battery_capacity_kwh: 60,
+                        battery_type: 'NMC',
+                        vin: ''
+                    },
+                    analysisResult: null,
+                    chatMessages: [],
+                    chatInput: '',
+                    chatLoading: false,
+                    exampleQuestions: [
+                        'Ist 85% SoH gut?',
+                        'Wie verlängere ich die Batterielebensdauer?',
+                        'Schadet Schnellladen der Batterie?'
+                    ]
+                }
+            },
+            computed: {
+                avgSoH() {
+                    if (this.reports.length === 0) return '-'
+                    const sum = this.reports.reduce((a, r) => a + r.soh_percent, 0)
+                    return (sum / this.reports.length).toFixed(1)
+                }
+            },
+            methods: {
+                async loadVehicles() {
+                    const res = await fetch('/api/v1/vehicles')
+                    this.vehicles = await res.json()
+                },
+                async addVehicle() {
+                    const res = await fetch('/api/v1/vehicles', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.newVehicle)
+                    })
+                    if (res.ok) {
+                        this.newVehicle = { make: '', model: '', year: 2023, battery_capacity_kwh: 60, battery_type: 'NMC', vin: '' }
+                        await this.loadVehicles()
+                    }
+                },
+                async deleteVehicle(id) {
+                    if (!confirm('Delete this vehicle?')) return
+                    await fetch(`/api/v1/vehicles/${id}`, { method: 'DELETE' })
+                    await this.loadVehicles()
+                },
+                async analyzeVehicle(id) {
+                    const res = await fetch('/api/v1/reports/analyze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ vehicle_id: id })
+                    })
+                    if (res.ok) {
+                        this.analysisResult = await res.json()
+                    } else {
+                        alert('Analysis failed. Make sure you have charging data uploaded.')
+                    }
+                },
+                async generatePassport(id) {
+                    const res = await fetch(`/api/v1/reports/passport/${id}`, { method: 'POST' })
+                    if (res.ok) {
+                        const passport = await res.json()
+                        alert(`Passport generated!\nID: ${passport.passport_id}\nHash: ${passport.certification_hash}`)
+                    } else {
+                        alert('Passport generation failed. Run analysis first.')
+                    }
+                },
+                async sendChat() {
+                    if (!this.chatInput.trim()) return
+                    
+                    this.chatMessages.push({ id: Date.now(), role: 'user', content: this.chatInput })
+                    const question = this.chatInput
+                    this.chatInput = ''
+                    this.chatLoading = true
+                    
+                    try {
+                        const res = await fetch('/api/v1/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ question })
+                        })
+                        const data = await res.json()
+                        this.chatMessages.push({ id: Date.now(), role: 'assistant', content: data.answer })
+                    } catch (e) {
+                        this.chatMessages.push({ id: Date.now(), role: 'assistant', content: 'Error: Could not get response.' })
+                    }
+                    
+                    this.chatLoading = false
+                },
+                getSoHColor(soh) {
+                    if (soh >= 90) return 'text-green-600'
+                    if (soh >= 80) return 'text-yellow-600'
+                    if (soh >= 70) return 'text-orange-600'
+                    return 'text-red-600'
+                },
+                getGradeColor(grade) {
+                    const colors = {
+                        excellent: 'bg-green-500',
+                        good: 'bg-blue-500',
+                        fair: 'bg-yellow-500',
+                        poor: 'bg-orange-500',
+                        critical: 'bg-red-500'
+                    }
+                    return colors[grade] || 'bg-gray-500'
+                }
+            },
+            mounted() {
+                this.loadVehicles()
+            }
+        }).mount('#app')
+    </script>
+</body>
+</html>

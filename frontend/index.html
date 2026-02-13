@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Malim - EV Battery Health</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card { @apply bg-white rounded-2xl shadow-lg p-6; }
+        .health-excellent { @apply bg-green-500; }
+        .health-good { @apply bg-green-400; }
+        .health-fair { @apply bg-yellow-400; }
+        .health-poor { @apply bg-orange-500; }
+        .health-critical { @apply bg-red-500; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="app">
+        <!-- Header -->
+        <header class="gradient-bg text-white py-6 px-4 shadow-lg">
+            <div class="max-w-6xl mx-auto flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-4xl">🔋</span>
+                    <div>
+                        <h1 class="text-2xl font-bold">Malim</h1>
+                        <p class="text-sm opacity-80">EV Battery Health Analysis</p>
+                    </div>
+                </div>
+                <nav class="flex gap-4">
+                    <button @click="view = 'dashboard'" :class="{'opacity-100': view === 'dashboard', 'opacity-60': view !== 'dashboard'}" class="hover:opacity-100 transition">Dashboard</button>
+                    <button @click="view = 'analyze'" :class="{'opacity-100': view === 'analyze', 'opacity-60': view !== 'analyze'}" class="hover:opacity-100 transition">Analyse</button>
+                    <button @click="view = 'passport'" :class="{'opacity-100': view === 'passport', 'opacity-60': view !== 'passport'}" class="hover:opacity-100 transition">Passport</button>
+                </nav>
+            </div>
+        </header>
+
+        <main class="max-w-6xl mx-auto p-6">
+            <!-- Dashboard View -->
+            <div v-if="view === 'dashboard'" class="space-y-6">
+                <h2 class="text-2xl font-bold text-gray-800">Meine Fahrzeuge</h2>
+                
+                <!-- Add Vehicle Form -->
+                <div class="card">
+                    <h3 class="font-semibold text-lg mb-4">Neues Fahrzeug hinzufügen</h3>
+                    <form @submit.prevent="addVehicle" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Marke</label>
+                            <input v-model="newVehicle.make" type="text" placeholder="Tesla" class="w-full border rounded-lg px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Modell</label>
+                            <input v-model="newVehicle.model" type="text" placeholder="Model 3" class="w-full border rounded-lg px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Baujahr</label>
+                            <input v-model.number="newVehicle.year" type="number" min="2010" max="2030" class="w-full border rounded-lg px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Batteriekapazität (kWh)</label>
+                            <input v-model.number="newVehicle.battery_capacity_kwh" type="number" step="0.1" class="w-full border rounded-lg px-3 py-2" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Batterietyp</label>
+                            <select v-model="newVehicle.battery_type" class="w-full border rounded-lg px-3 py-2">
+                                <option value="NMC">NMC</option>
+                                <option value="LFP">LFP</option>
+                                <option value="NCA">NCA</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-600 mb-1">Kilometerstand</label>
+                            <input v-model.number="newVehicle.mileage_km" type="number" class="w-full border rounded-lg px-3 py-2">
+                        </div>
+                        <div class="md:col-span-3">
+                            <button type="submit" class="gradient-bg text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition">
+                                + Fahrzeug hinzufügen
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Vehicle List -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div v-for="vehicle in vehicles" :key="vehicle.id" class="card hover:shadow-xl transition cursor-pointer" @click="selectVehicle(vehicle)">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h4 class="font-bold text-lg">{{ vehicle.make }} {{ vehicle.model }}</h4>
+                                <p class="text-gray-500">{{ vehicle.year }} · {{ vehicle.battery_capacity_kwh }} kWh</p>
+                            </div>
+                            <span v-if="vehicle.lastReport" :class="'px-3 py-1 rounded-full text-white text-sm ' + getHealthClass(vehicle.lastReport.health_grade)">
+                                {{ vehicle.lastReport.soh_percent }}%
+                            </span>
+                            <span v-else class="px-3 py-1 rounded-full bg-gray-200 text-gray-600 text-sm">
+                                Neu
+                            </span>
+                        </div>
+                        <div class="mt-4 text-sm text-gray-600">
+                            <p v-if="vehicle.mileage_km">🛣️ {{ vehicle.mileage_km.toLocaleString() }} km</p>
+                            <p>🔌 {{ vehicle.battery_type }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="vehicles.length === 0" class="text-center py-12 text-gray-500">
+                    <p class="text-5xl mb-4">🚗</p>
+                    <p>Noch keine Fahrzeuge. Füge dein erstes EV hinzu!</p>
+                </div>
+            </div>
+
+            <!-- Analyze View -->
+            <div v-if="view === 'analyze'" class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-gray-800">Batterie-Analyse</h2>
+                    <select v-model="selectedVehicleId" class="border rounded-lg px-4 py-2">
+                        <option value="">Fahrzeug wählen...</option>
+                        <option v-for="v in vehicles" :key="v.id" :value="v.id">{{ v.make }} {{ v.model }}</option>
+                    </select>
+                </div>
+
+                <div v-if="selectedVehicleId" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Add Charging Session -->
+                    <div class="card">
+                        <h3 class="font-semibold text-lg mb-4">Ladevorgang hinzufügen</h3>
+                        <form @submit.prevent="addChargingSession" class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Start SoC (%)</label>
+                                    <input v-model.number="newSession.start_soc" type="number" min="0" max="100" class="w-full border rounded-lg px-3 py-2" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">End SoC (%)</label>
+                                    <input v-model.number="newSession.end_soc" type="number" min="0" max="100" class="w-full border rounded-lg px-3 py-2" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Energie (kWh)</label>
+                                    <input v-model.number="newSession.energy_kwh" type="number" step="0.1" class="w-full border rounded-lg px-3 py-2" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Dauer (Min)</label>
+                                    <input v-model.number="newSession.duration_minutes" type="number" class="w-full border rounded-lg px-3 py-2" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Ladeleistung (kW)</label>
+                                    <input v-model.number="newSession.charger_power_kw" type="number" class="w-full border rounded-lg px-3 py-2" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">Temperatur (°C)</label>
+                                    <input v-model.number="newSession.temperature_c" type="number" class="w-full border rounded-lg px-3 py-2">
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input v-model="newSession.is_fast_charge" type="checkbox" id="fastcharge" class="rounded">
+                                <label for="fastcharge" class="text-sm text-gray-600">Schnellladen (DC)</label>
+                            </div>
+                            <button type="submit" class="w-full gradient-bg text-white py-2 rounded-lg font-medium">
+                                + Ladevorgang speichern
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Analysis Result -->
+                    <div class="card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-lg">Analyse-Ergebnis</h3>
+                            <button @click="analyzeVehicle" class="gradient-bg text-white px-4 py-2 rounded-lg text-sm font-medium" :disabled="analyzing">
+                                {{ analyzing ? 'Analysiere...' : '🔍 Analysieren' }}
+                            </button>
+                        </div>
+
+                        <div v-if="currentReport" class="space-y-4">
+                            <!-- SoH Gauge -->
+                            <div class="text-center py-6">
+                                <div class="relative inline-block">
+                                    <svg class="w-40 h-40" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="45" fill="none" stroke="#e5e7eb" stroke-width="10"/>
+                                        <circle cx="50" cy="50" r="45" fill="none" :stroke="getHealthColor(currentReport.health_grade)" stroke-width="10" 
+                                            stroke-linecap="round" :stroke-dasharray="(currentReport.soh_percent / 100 * 283) + ' 283'" 
+                                            transform="rotate(-90 50 50)"/>
+                                    </svg>
+                                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                        <span class="text-3xl font-bold">{{ currentReport.soh_percent }}%</span>
+                                        <span class="text-sm text-gray-500">SoH</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Health Grade -->
+                            <div class="text-center">
+                                <span :class="'inline-block px-4 py-2 rounded-full text-white font-medium ' + getHealthClass(currentReport.health_grade)">
+                                    {{ getHealthLabel(currentReport.health_grade) }}
+                                </span>
+                            </div>
+
+                            <!-- Summary -->
+                            <p class="text-gray-600 text-center">{{ currentReport.health_summary }}</p>
+
+                            <!-- Stats -->
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <p class="text-gray-500">Kapazität</p>
+                                    <p class="font-semibold">{{ currentReport.estimated_capacity_kwh }} / {{ currentReport.original_capacity_kwh }} kWh</p>
+                                </div>
+                                <div class="bg-gray-50 rounded-lg p-3">
+                                    <p class="text-gray-500">Werteinfluss</p>
+                                    <p class="font-semibold" :class="currentReport.value_impact_chf < 0 ? 'text-red-500' : 'text-green-500'">
+                                        {{ currentReport.value_impact_chf > 0 ? '+' : '' }}{{ currentReport.value_impact_chf }} CHF
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Recommendations -->
+                            <div v-if="currentReport.recommendations?.length">
+                                <h4 class="font-medium mb-2">💡 Empfehlungen</h4>
+                                <ul class="space-y-1 text-sm text-gray-600">
+                                    <li v-for="rec in currentReport.recommendations" :key="rec" class="flex items-start gap-2">
+                                        <span class="text-green-500">✓</span> {{ rec }}
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <!-- Risk Factors -->
+                            <div v-if="currentReport.risk_factors?.length">
+                                <h4 class="font-medium mb-2">⚠️ Risikofaktoren</h4>
+                                <ul class="space-y-1 text-sm text-gray-600">
+                                    <li v-for="risk in currentReport.risk_factors" :key="risk" class="flex items-start gap-2">
+                                        <span class="text-orange-500">!</span> {{ risk }}
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div v-else class="text-center py-12 text-gray-400">
+                            <p class="text-4xl mb-2">📊</p>
+                            <p>Füge Ladevorgänge hinzu und starte die Analyse</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-else class="text-center py-12 text-gray-500">
+                    <p>Wähle ein Fahrzeug aus, um die Analyse zu starten</p>
+                </div>
+            </div>
+
+            <!-- Passport View -->
+            <div v-if="view === 'passport'" class="space-y-6">
+                <h2 class="text-2xl font-bold text-gray-800">Battery Passport</h2>
+
+                <div v-if="currentPassport" class="max-w-2xl mx-auto">
+                    <div class="card border-2 border-purple-200">
+                        <!-- Passport Header -->
+                        <div class="text-center border-b pb-4 mb-4">
+                            <div class="text-5xl mb-2">🔋</div>
+                            <h3 class="text-xl font-bold text-purple-700">Battery Value Passport</h3>
+                            <p class="text-sm text-gray-500">Zertifiziert von Malim</p>
+                        </div>
+
+                        <!-- Vehicle Info -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <p class="text-sm text-gray-500">Fahrzeug</p>
+                                <p class="font-semibold">{{ currentPassport.make }} {{ currentPassport.model }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Baujahr</p>
+                                <p class="font-semibold">{{ currentPassport.year }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Kilometerstand</p>
+                                <p class="font-semibold">{{ currentPassport.mileage_km?.toLocaleString() || '-' }} km</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Ausgestellt</p>
+                                <p class="font-semibold">{{ formatDate(currentPassport.issued_date) }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Health Status -->
+                        <div class="bg-gray-50 rounded-xl p-6 text-center mb-6">
+                            <div class="text-5xl font-bold mb-2" :style="{color: getHealthColor(currentPassport.health_grade)}">
+                                {{ currentPassport.soh_percent }}%
+                            </div>
+                            <p class="text-gray-600">State of Health</p>
+                            <span :class="'inline-block mt-2 px-4 py-1 rounded-full text-white text-sm ' + getHealthClass(currentPassport.health_grade)">
+                                {{ getHealthLabel(currentPassport.health_grade) }}
+                            </span>
+                        </div>
+
+                        <!-- Certification -->
+                        <div class="border-t pt-4 text-center">
+                            <p class="text-xs text-gray-400 mb-2">Zertifizierungs-Hash</p>
+                            <code class="bg-gray-100 px-3 py-1 rounded text-sm font-mono">{{ currentPassport.certification_hash }}</code>
+                            <p class="text-xs text-gray-400 mt-4">Gültig bis: {{ formatDate(currentPassport.valid_until) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button @click="currentPassport = null" class="text-purple-600 hover:underline">
+                            ← Zurück
+                        </button>
+                    </div>
+                </div>
+
+                <div v-else class="max-w-2xl mx-auto">
+                    <div class="card">
+                        <h3 class="font-semibold text-lg mb-4">Passport generieren</h3>
+                        <p class="text-gray-600 mb-4">Wähle ein analysiertes Fahrzeug, um einen Battery Passport zu erstellen.</p>
+                        
+                        <div class="space-y-2">
+                            <div v-for="v in vehicles" :key="v.id" 
+                                class="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                                @click="generatePassport(v.id)">
+                                <div>
+                                    <p class="font-medium">{{ v.make }} {{ v.model }}</p>
+                                    <p class="text-sm text-gray-500">{{ v.year }}</p>
+                                </div>
+                                <button class="gradient-bg text-white px-4 py-2 rounded-lg text-sm">
+                                    Passport erstellen
+                                </button>
+                            </div>
+                        </div>
+
+                        <div v-if="vehicles.length === 0" class="text-center py-8 text-gray-400">
+                            <p>Keine Fahrzeuge vorhanden</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Toast Notifications -->
+        <div class="fixed bottom-4 right-4 space-y-2">
+            <div v-for="toast in toasts" :key="toast.id" 
+                :class="'px-4 py-3 rounded-lg shadow-lg text-white ' + (toast.type === 'error' ? 'bg-red-500' : 'bg-green-500')">
+                {{ toast.message }}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api/v1';
+
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    view: 'dashboard',
+                    vehicles: [],
+                    selectedVehicleId: '',
+                    currentReport: null,
+                    currentPassport: null,
+                    analyzing: false,
+                    toasts: [],
+                    newVehicle: {
+                        make: '',
+                        model: '',
+                        year: 2023,
+                        battery_capacity_kwh: 60,
+                        battery_type: 'NMC',
+                        mileage_km: null
+                    },
+                    newSession: {
+                        start_soc: 20,
+                        end_soc: 80,
+                        energy_kwh: 35,
+                        duration_minutes: 60,
+                        charger_power_kw: 11,
+                        temperature_c: 20,
+                        is_fast_charge: false
+                    }
+                };
+            },
+            async mounted() {
+                await this.loadVehicles();
+            },
+            methods: {
+                async loadVehicles() {
+                    try {
+                        const res = await fetch(`${API_BASE}/vehicles`);
+                        this.vehicles = await res.json();
+                    } catch (e) {
+                        this.showToast('Fehler beim Laden der Fahrzeuge', 'error');
+                    }
+                },
+                async addVehicle() {
+                    try {
+                        const res = await fetch(`${API_BASE}/vehicles`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(this.newVehicle)
+                        });
+                        if (res.ok) {
+                            await this.loadVehicles();
+                            this.newVehicle = { make: '', model: '', year: 2023, battery_capacity_kwh: 60, battery_type: 'NMC', mileage_km: null };
+                            this.showToast('Fahrzeug hinzugefügt!', 'success');
+                        }
+                    } catch (e) {
+                        this.showToast('Fehler beim Hinzufügen', 'error');
+                    }
+                },
+                async addChargingSession() {
+                    try {
+                        const session = {
+                            ...this.newSession,
+                            start_soc: this.newSession.start_soc / 100,
+                            end_soc: this.newSession.end_soc / 100,
+                            timestamp: new Date().toISOString()
+                        };
+                        const res = await fetch(`${API_BASE}/vehicles/${this.selectedVehicleId}/charging-sessions`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(session)
+                        });
+                        if (res.ok) {
+                            this.showToast('Ladevorgang gespeichert!', 'success');
+                        }
+                    } catch (e) {
+                        this.showToast('Fehler beim Speichern', 'error');
+                    }
+                },
+                async analyzeVehicle() {
+                    this.analyzing = true;
+                    try {
+                        const res = await fetch(`${API_BASE}/reports/analyze`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                vehicle_id: this.selectedVehicleId,
+                                include_prediction: true
+                            })
+                        });
+                        if (res.ok) {
+                            this.currentReport = await res.json();
+                            this.showToast('Analyse abgeschlossen!', 'success');
+                        }
+                    } catch (e) {
+                        this.showToast('Analyse fehlgeschlagen', 'error');
+                    }
+                    this.analyzing = false;
+                },
+                async generatePassport(vehicleId) {
+                    try {
+                        const res = await fetch(`${API_BASE}/reports/passport/${vehicleId}`, {
+                            method: 'POST'
+                        });
+                        if (res.ok) {
+                            this.currentPassport = await res.json();
+                            this.showToast('Passport erstellt!', 'success');
+                        }
+                    } catch (e) {
+                        this.showToast('Passport-Erstellung fehlgeschlagen', 'error');
+                    }
+                },
+                selectVehicle(vehicle) {
+                    this.selectedVehicleId = vehicle.id;
+                    this.view = 'analyze';
+                },
+                getHealthClass(grade) {
+                    const classes = {
+                        excellent: 'health-excellent',
+                        good: 'health-good',
+                        fair: 'health-fair',
+                        poor: 'health-poor',
+                        critical: 'health-critical'
+                    };
+                    return classes[grade] || 'bg-gray-400';
+                },
+                getHealthColor(grade) {
+                    const colors = {
+                        excellent: '#22c55e',
+                        good: '#4ade80',
+                        fair: '#facc15',
+                        poor: '#f97316',
+                        critical: '#ef4444'
+                    };
+                    return colors[grade] || '#9ca3af';
+                },
+                getHealthLabel(grade) {
+                    const labels = {
+                        excellent: '🟢 Ausgezeichnet',
+                        good: '🟢 Gut',
+                        fair: '🟡 Befriedigend',
+                        poor: '🟠 Mangelhaft',
+                        critical: '🔴 Kritisch'
+                    };
+                    return labels[grade] || grade;
+                },
+                formatDate(dateStr) {
+                    if (!dateStr) return '-';
+                    return new Date(dateStr).toLocaleDateString('de-CH');
+                },
+                showToast(message, type = 'success') {
+                    const id = Date.now();
+                    this.toasts.push({ id, message, type });
+                    setTimeout(() => {
+                        this.toasts = this.toasts.filter(t => t.id !== id);
+                    }, 3000);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
